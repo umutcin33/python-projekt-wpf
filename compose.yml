@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:18
+    container_name: projekt-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: projekt
+      POSTGRES_PASSWORD: p
+      POSTGRES_DB: projekt
+      TZ: Europe/Berlin
+    ports:
+      - "5433:5432"
+    volumes:
+      # ab PostgreSQL 18 liegt PGDATA unter /var/lib/postgresql/18/docker
+      - db-data:/var/lib/postgresql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U projekt -d projekt"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:9
+    container_name: projekt-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@acme.com
+      PGADMIN_DEFAULT_PASSWORD: p
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "8888:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./db/pgadmin-servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:
+  pgadmin-data:
