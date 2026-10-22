@@ -1,2 +1,6 @@
+"""REST-Appserver für Kunden."""
+
+
 def main() -> None:
-    print("Hello from kunde!")
+    """Einstiegspunkt für `uv run kunde`."""
+    print("Hello from kunde!")  # noqa: T201
