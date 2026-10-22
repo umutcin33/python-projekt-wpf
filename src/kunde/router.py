@@ -12,9 +12,10 @@ from fastapi import (
     Response,
     status,
 )
+from sqlalchemy.orm.exc import StaleDataError
 
 from kunde.repository import KundeRepository
-from kunde.schemas import KundeInput, KundeModel
+from kunde.schemas import KundeInput, KundeModel, KundeUpdate
 
 router = APIRouter(prefix="/kunden", tags=["Kunde"])
 
@@ -67,3 +68,45 @@ def post(
     response.headers["Location"] = str(request.url_for("get_by_id", kunde_id=kunde.id))
     response.headers["ETag"] = f'"{kunde.version}"'
     return KundeModel.model_validate(kunde)
+
+
+@router.put("/{kunde_id}", status_code=status.HTTP_204_NO_CONTENT)
+def put(
+    kunde_id: int,
+    kunde_update: KundeUpdate,
+    repo: Annotated[KundeRepository, Depends()],
+    if_match: Annotated[str | None, Header()] = None,
+) -> Response:
+    """Einen Kunden aktualisieren; Lost Updates werden durch `If-Match` vermieden."""
+    if if_match is None:
+        raise HTTPException(
+            status.HTTP_428_PRECONDITION_REQUIRED, "Header If-Match fehlt"
+        )
+
+    kunde = repo.find_by_id(kunde_id)
+    if kunde is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Kein Kunde mit ID {kunde_id}")
+    if if_match != f'"{kunde.version}"':
+        raise HTTPException(
+            status.HTTP_412_PRECONDITION_FAILED,
+            f"Die Version {if_match} ist nicht aktuell",
+        )
+    if any(k.id != kunde_id for k in repo.find(email=kunde_update.email)):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Die Email {kunde_update.email} existiert bereits",
+        )
+
+    kunde_update.update_entity(kunde)
+    try:
+        kunde = repo.update(kunde)
+    except StaleDataError as err:
+        # zwischen Lesen und Schreiben durch einen anderen Request geändert
+        raise HTTPException(
+            status.HTTP_412_PRECONDITION_FAILED,
+            "Der Kunde wurde zwischenzeitlich geändert",
+        ) from err
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT,
+        headers={"ETag": f'"{kunde.version}"'},
+    )

@@ -39,3 +39,14 @@ class KundeRepository:
         self.session.commit()
         self.session.refresh(kunde)
         return kunde
+
+    def update(self, kunde: Kunde) -> Kunde:
+        """Änderungen an einem gelesenen Kunden speichern.
+
+        Raises:
+            StaleDataError: Der Kunde wurde zwischenzeitlich geändert.
+        """
+        kunde.version += 1
+        self.session.commit()
+        self.session.refresh(kunde)
+        return kunde

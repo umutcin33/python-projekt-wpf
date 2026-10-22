@@ -36,14 +36,28 @@ class BestellungInput(BaseModel):
         return Bestellung(**self.model_dump())
 
 
-class KundeInput(BaseModel):
-    """Kunde in einem POST-Request."""
+class KundeUpdate(BaseModel):
+    """Kunde in einem PUT-Request, d.h. ohne Bestellungen."""
 
     nachname: Name
     vorname: Name
     email: EmailStr
     geburtsdatum: PastDate | None = None
     adresse: AdresseInput
+
+    def update_entity(self, kunde: Kunde) -> None:
+        """Ein vorhandenes Entity-Objekt mit den neuen Werten überschreiben."""
+        kunde.nachname = self.nachname
+        kunde.vorname = self.vorname
+        kunde.email = self.email
+        kunde.geburtsdatum = self.geburtsdatum
+        for key, value in self.adresse.model_dump().items():
+            setattr(kunde.adresse, key, value)
+
+
+class KundeInput(KundeUpdate):
+    """Kunde in einem POST-Request."""
+
     bestellungen: list[BestellungInput] = []
 
     def to_entity(self) -> Kunde:

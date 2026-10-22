@@ -2,6 +2,7 @@
 
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import ForeignKey, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -33,6 +34,14 @@ class Kunde(Base):
     bestellungen: Mapped[list[Bestellung]] = relationship(
         back_populates="kunde", cascade="all, delete-orphan"
     )
+
+    # Optimistische Synchronisation: UPDATE ... WHERE version = <alte Version>
+    # Die Version wird im Repository hochgezählt, damit auch eine geänderte
+    # Adresse als Änderung des Kunden zählt.
+    __mapper_args__: dict[str, Any] = {  # noqa: RUF012
+        "version_id_col": version,
+        "version_id_generator": False,
+    }
 
 
 class Adresse(Base):
