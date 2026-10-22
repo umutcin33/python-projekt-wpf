@@ -32,3 +32,10 @@ class KundeRepository:
         if email is not None:
             statement = statement.where(Kunde.email == email)
         return self.session.scalars(statement).all()
+
+    def insert(self, kunde: Kunde) -> Kunde:
+        """Einen neuen Kunden einschließlich Adresse und Bestellungen speichern."""
+        self.session.add(kunde)
+        self.session.commit()
+        self.session.refresh(kunde)
+        return kunde
