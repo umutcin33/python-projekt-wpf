@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 
 from kunde.repository import KundeRepository
 from kunde.schemas import KundeModel
@@ -21,13 +21,20 @@ def get(
     return [KundeModel.model_validate(kunde) for kunde in kunden]
 
 
-@router.get("/{kunde_id}")
+@router.get("/{kunde_id}", response_model=KundeModel)
 def get_by_id(
     kunde_id: int,
     repo: Annotated[KundeRepository, Depends()],
-) -> KundeModel:
-    """Einen Kunden zur ID lesen."""
+    response: Response,
+    if_none_match: Annotated[str | None, Header()] = None,
+) -> KundeModel | Response:
+    """Einen Kunden zur ID lesen, bedingt durch `If-None-Match`."""
     kunde = repo.find_by_id(kunde_id)
     if kunde is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Kein Kunde mit ID {kunde_id}")
+
+    etag = f'"{kunde.version}"'
+    if if_none_match == etag:
+        return Response(status_code=status.HTTP_304_NOT_MODIFIED)
+    response.headers["ETag"] = etag
     return KundeModel.model_validate(kunde)
