@@ -18,6 +18,7 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "ruff>=0.17.1",
+    "ty>=0.0.90",
 ]
 
 [tool.ruff]
@@ -37,3 +38,12 @@ ignore = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.ty.environment]
+python-version = "3.14"
+
+[tool.ty.src]
+include = ["src", "tests"]
+
+[tool.ty.rules]
+possibly-unresolved-reference = "error"
