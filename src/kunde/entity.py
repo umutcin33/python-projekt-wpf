@@ -27,7 +27,7 @@ class Kunde(Base):
     aktualisiert: Mapped[datetime] = mapped_column(
         server_default=func.now(), onupdate=func.now()
     )
-
+    # 1:1 und 1:N Beziehungen zu Adresse und Bestellung
     adresse: Mapped[Adresse] = relationship(
         back_populates="kunde", cascade="all, delete-orphan"
     )
